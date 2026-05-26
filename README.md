@@ -42,7 +42,7 @@ The models demonstrate strong convergence and accurately map the non-linear degr
 
 ### Battery Degradation Profile Example
 
-![Battery Profile Example](images/battery-data-example-3.png)
+![Battery Profile Example](images/data-example.png)
 
 ## ⚙️ How to Run
 
