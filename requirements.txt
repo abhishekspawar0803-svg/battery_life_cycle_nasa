@@ -3,5 +3,4 @@ pandas
 matplotlib
 scikit-learn
 torch
-scipy
-seaborn
+kagglehub
