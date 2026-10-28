@@ -14,15 +14,15 @@ Each of the 4 cells takes one turn as the unseen test cell. The model trains on 
 
 | Test cell | SOH, LSTM (%) | SOH, linear (%) | SOH, mean guess (%) | RUL, LSTM (cycles) | RUL, linear (cycles) | RUL, mean guess (cycles) |
 |---|---|---|---|---|---|---|
-| B0005 | 2.79 | 4.38 | 9.18 | 6.31 | 17.37 | 29.13 |
-| B0006 | 6.25 | 12.66 | 11.90 | 6.98 | 55.95 | 24.95 |
-| B0007 | 2.04 | 3.71 | 8.99 | 9.76 | 31.34 | 45.39 |
-| B0018 | 2.15 | 3.89 | 7.11 | 6.80 | 18.92 | 22.75 |
-| **Average** | **3.31** | 6.16 | 9.30 | **7.46** | 30.90 | 30.56 |
+| B0005 | 2.92 | 4.38 | 9.18 | 5.97 | 17.37 | 29.13 |
+| B0006 | 6.05 | 12.66 | 11.90 | 7.23 | 55.95 | 24.95 |
+| B0007 | 2.01 | 3.71 | 8.99 | 11.38 | 31.34 | 45.39 |
+| B0018 | 1.79 | 3.89 | 7.11 | 6.65 | 18.92 | 22.75 |
+| **Average** | **3.19** | 6.16 | 9.30 | **7.81** | 30.90 | 30.56 |
 
 - The LSTM beats both baselines on every cell, for both SOH and RUL.
 - B0006 is the hardest cell. It ages on a different curve from the others (see section 2).
-- All numbers come from one run with `torch.manual_seed(0)`. On a GPU they can move a little, RUL most of all.
+- All numbers come from one GPU run of the notebook with `torch.manual_seed(0)`. A rerun can move the LSTM numbers a little, RUL most of all.
 
 ## How it works
 
@@ -87,7 +87,7 @@ The notebook builds 6 features per cycle. Each is the mean over the first 1000 s
 | disT | −0.56 / −0.66 / −0.38 / +0.15 | no | Follows room temperature, and the sign flips |
 | **disV** | **0.99 / 0.99 / 0.99 / 0.98** | **yes** | Sags under load as the cell ages |
 
-With all 6 features, the LSTM trained on B0005 + B0006 used `disI` as a shortcut. On B0007, whose `disI` lies outside the training range, the SOH error was 9.6%. With `disV` only, it was 2.2%.
+In a test run with all 6 features, the LSTM trained on B0005 + B0006 used `disI` as a shortcut. On B0007, whose `disI` lies outside the training range, the SOH error was about 9.6%. With `disV` only, it is about 2.3%.
 
 ![SOH vs disV and chV for each cell](images/soh-vs-voltage.png)
 
@@ -115,8 +115,8 @@ The main part of the notebook uses this split. The leave-one-cell-out table abov
 
 | | LSTM | Linear | Mean guess |
 |---|---|---|---|
-| SOH RMSE (%) | 2.23 | 4.18 | 8.98 |
-| RUL RMSE (cycles) | 14.3 | 30.3 | 44.7 |
+| SOH RMSE (%) | 2.27 | 4.18 | 8.98 |
+| RUL RMSE (cycles) | 10.1 | 30.3 | 44.7 |
 
 ![Predicted vs true SOH on B0007 over its life](images/soh-eval.png)
 
@@ -128,7 +128,7 @@ The main part of the notebook uses this split. The leave-one-cell-out table abov
 
 ![Predicted vs true RUL on B0007](images/rul-eval.png)
 
-*RUL of B0007. Early in life the model predicts about 80 cycles when the truth is about 115, because B0007 ages slower than B0005 and B0006. After end of life (cycle 126), the true RUL stays 0.*
+*RUL of B0007, true vs predicted, in cycle order. After end of life (cycle 126), the true RUL stays 0.*
 
 ## Earlier version of this project
 
@@ -144,7 +144,7 @@ That file also does not match the original NASA data. It has 220 / 210 / 250 cyc
 - **Very little data.** Only 4 cells, all the same type, at the same room temperature and the same 2 A load. A real EV pack sees changing loads and temperatures.
 - **Needs a fixed load.** `disV` needs the first 1000 s of a 2 A constant-current discharge. A real BMS rarely gets that. It would need a fixed test pulse or a similar known load.
 - **Feature choice was not blind.** `disV` was picked after comparing a few feature sets on these same 4 cells, so a brand-new cell may do a little worse than the tables above.
-- **RUL depends on ageing speed.** RUL from a single cell's state can't know how fast that cell will age from now on. That is why B0007, the slowest-ageing cell, gets too little remaining life early on.
+- **RUL depends on ageing speed.** RUL from a single cell's state can't know how fast that cell will age from now on. So a cell that ages slower or faster than the training cells gets a biased RUL. B0007 ages slowest, and it has the highest RUL error.
 - **Unused LSTM dropout.** `dropout=0.2` inside `nn.LSTM` does nothing with 1 layer (PyTorch prints a warning). Only the dropout before the linear layer is active.
 
 ## How to run
@@ -153,7 +153,7 @@ That file also does not match the original NASA data. It has 220 / 210 / 250 cyc
 pip install -r requirements.txt
 ```
 
-Open `battery_life_cycle.ipynb` and run all cells.
+Open `battery_life_cycle_nasa.ipynb` and run all cells.
 
 - **Download:** the first run downloads about 228 MB through `kagglehub`. This public dataset downloaded without a Kaggle login when tested.
 - **GPU:** the notebook calls `.cuda()`, so it needs an NVIDIA GPU with CUDA PyTorch. On a CPU-only machine, remove the `.cuda()` calls.
@@ -162,6 +162,6 @@ Open `battery_life_cycle.ipynb` and run all cells.
 
 ## Files
 
-- `battery_life_cycle.ipynb`: data loading, features, training, baselines, the leave-one-cell-out check, and all plots
+- `battery_life_cycle_nasa.ipynb`: data loading, features, training, baselines, the leave-one-cell-out check, and all plots
 - `images/`: plots saved by the notebook
 - `requirements.txt`: Python packages needed to run the notebook
